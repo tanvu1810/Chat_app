@@ -9,6 +9,7 @@
   },
   "main": "index.js",
   "scripts": {
+     "dev": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -23,3 +24,4 @@
   },
   "homepage": "https://github.com/tanvu1810/Chat_app#readme"
 }
+
