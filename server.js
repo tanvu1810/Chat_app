@@ -6,11 +6,9 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 const app = express();
 const httpServer = createServer(app);
-
-// ✅ Connection State Recovery (giúp giữ session/rooms, và thường giữ socket.id nếu recover thành công)
+// Giúp giữ session/rooms, và thường giữ socket.id nếu recover thành công)
 const io = new Server(httpServer, {
   connectionStateRecovery: {
     maxDisconnectionDuration: 2 * 60 * 1000, // 2 phút
@@ -21,9 +19,8 @@ const io = new Server(httpServer, {
 // Serve file client
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
-});
+});                                                             
 
-// ---- Online tracking: username -> Set(socketId)
 const online = new Map(); // Map<string, Set<string>>
 
 function addOnline(username, socketId) {
@@ -46,15 +43,17 @@ io.use((socket, next) => {
   if (!username || typeof username !== "string") {
     return next(new Error("USERNAME_REQUIRED"));
   }
-  // gắn vào socket.data để dùng sau (và recovery có thể restore data)
+
   socket.data.username = username.trim();
-  next();
+  next();                                                     
 });
 
 io.on("connection", (socket) => {
   const username = socket.data.username;
 
-  // ✅ mỗi user join 1 room riêng (inbox room) => route ổn định, multi-tab/multi-device ok
+  console.log(`${username} connected`);
+
+  // join room riêng của user
   socket.join(`user:${username}`);
 
   addOnline(username, socket.id);
@@ -85,22 +84,21 @@ io.on("connection", (socket) => {
 
     const payload = {
       from: username,
-      to: target,
+      to: target,  
       content: msg,
       ts: Date.now()
     };
 
     // gửi cho người nhận
     io.to(`user:${target}`).emit("private:message", payload);
-    // echo lại cho người gửi (để UI hiển thị ngay)
     socket.emit("private:message", payload);
-
     ack?.({ ok: true });
   });
 
   socket.on("disconnect", () => {
     removeOnline(username, socket.id);
     io.emit("users:list", onlineList());
+    console.log(`${username} disconnected`);
   });
 });
 

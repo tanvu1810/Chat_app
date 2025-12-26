@@ -97,70 +97,76 @@
     <!-- Login overlay -->
     <div id="login">
       <div id="loginBox">
-        <div style="font-weight: 700; margin-bottom: 8px">Enter your name</div>
+        <div style="font-weight: 700; margin-bottom: 8px">
+          Nhập tên của bạn:
+        </div>
         <input id="name" placeholder="Your username..." />
         <div style="display: flex; gap: 8px; margin-top: 10px">
-          <button id="joinBtn" type="button">Join</button>
-          <button id="resetBtn" type="button">Reset</button>
-        </div>
-        <div class="hint">
-          Username sẽ được lưu localStorage. Mở 2 tab để test 2 user.
+          <button id="joinBtn" type="button">Vào</button>
+          <button id="resetBtn" type="button">Xóa</button>
         </div>
       </div>
     </div>
 
     <div id="left">
       <div id="meLine" style="font-weight: 700; margin-bottom: 12px">
-        Not connected
+        Chưa kết nối
       </div>
       <div id="users"></div>
-      <div style="margin-top: 14px">
-        <button id="dropBtn" type="button">Simulate drop</button>
-        <div class="hint" style="color: #cfcfcf">
-          Test recovery: đóng kết nối cấp thấp.
-        </div>
-      </div>
     </div>
 
     <div id="right">
-      <div id="top">Select a user to chat</div>
+      <div id="top">Chọn một người dùng để chat</div>
       <div id="chat"></div>
 
-      <div id="composer">
-        <input id="input" placeholder="Your message..." />
-        <button id="sendBtn" type="button">Send</button>
-      </div>
+      <form id="composer">
+        <input id="input" placeholder="Your message..." autocomplete="off" />
+        <button id="sendBtn" type="submit">Gửi</button>
+      </form>
     </div>
-
     <script src="/socket.io/socket.io.js"></script>
     <script>
       const loginEl = document.getElementById("login");
       const nameEl = document.getElementById("name");
       const joinBtn = document.getElementById("joinBtn");
-      const resetBtn = document.getElementById("resetBtn");
 
       const meLine = document.getElementById("meLine");
       const usersEl = document.getElementById("users");
       const topEl = document.getElementById("top");
       const chatEl = document.getElementById("chat");
-      const inputEl = document.getElementById("input");
-      const sendBtn = document.getElementById("sendBtn");
-      const dropBtn = document.getElementById("dropBtn");
 
-      let socket = null;
-      let username = localStorage.getItem("username") || "";
-      let activeTo = "";
-      const conversations = new Map(); // toUser -> [{from,to,content,ts}]
+      const composerEl = document.getElementById("composer");
+      const inputEl = document.getElementById("input");
+
+      const MSG_KEY = "chat:conversations:v1";
+      const USER_KEY = "chat:username:v1";
+
+      function loadConversations() {
+        try {
+          const raw = sessionStorage.getItem(MSG_KEY);
+          if (!raw) return new Map();
+          return new Map(Object.entries(JSON.parse(raw)));
+        } catch {
+          return new Map();
+        }
+      }
+
+      function saveConversations(conversations) {
+        sessionStorage.setItem(
+          MSG_KEY,
+          JSON.stringify(Object.fromEntries(conversations))
+        );
+      }
 
       function genUsername(raw) {
-        const base = raw
-          .trim()
-          .toLowerCase()
-          .replace(/\s+/g, "_")
-          .replace(/[^a-z0-9_]/g, "");
-        const suffix = Math.floor(1000 + Math.random() * 9000);
-        return base ? `${base}_${suffix}` : `user_${suffix}`;
+        const base = raw.trim();
+        return base || "user";
       }
+
+      let socket = null;
+      let username = sessionStorage.getItem(USER_KEY) || "";
+      let activeTo = "";
+      const conversations = loadConversations();
 
       function renderUsers(list) {
         usersEl.innerHTML = "";
@@ -182,6 +188,7 @@
       function renderChat() {
         chatEl.innerHTML = "";
         if (!activeTo) return;
+
         const msgs = conversations.get(activeTo) || [];
         msgs.forEach((m) => {
           const div = document.createElement("div");
@@ -196,60 +203,39 @@
       }
 
       function addMsg(m) {
-        const peer = m.from === username ? m.to : m.from; // conversation key
+        const peer = m.from === username ? m.to : m.from;
         if (!conversations.has(peer)) conversations.set(peer, []);
         conversations.get(peer).push(m);
+        saveConversations(conversations);
         if (peer === activeTo) renderChat();
       }
 
       function connect() {
-        socket = io({
-          auth: { username },
-        });
+        socket = io({ auth: { username } });
 
-        socket.on("me", (info) => {
-          meLine.textContent = `${info.username} | socketId=${info.socketId} | recovered=${info.recovered}`;
+        socket.on("connect", () => {
+          meLine.textContent = `${username} | socketId=${socket.id}`;
         });
 
         socket.on("users:list", (list) => {
           renderUsers(list);
+          if (activeTo && list.includes(activeTo)) {
+            topEl.textContent = `Chatting with ${activeTo}`;
+            renderChat();
+          }
         });
 
-        socket.on("private:message", (m) => {
-          addMsg(m);
-        });
+        socket.on("private:message", (m) => addMsg(m));
 
         socket.on("connect_error", (err) => {
           meLine.textContent = `connect_error: ${err.message}`;
         });
       }
 
-      function showLogin() {
-        loginEl.style.display = "flex";
-        nameEl.value = username ? username : "";
-      }
-      function hideLogin() {
-        loginEl.style.display = "none";
-      }
-
-      joinBtn.onclick = () => {
-        const raw = nameEl.value;
-        // Nếu user nhập "Alice" thì sinh username ổn định kiểu alice_1234
-        username = genUsername(raw);
-        localStorage.setItem("username", username);
-        hideLogin();
-        connect();
-      };
-
-      resetBtn.onclick = () => {
-        localStorage.removeItem("username");
-        username = "";
-        location.reload();
-      };
-
-      sendBtn.onclick = () => {
+      function sendMessage() {
         if (!socket || !socket.connected) return;
         if (!activeTo) return alert("Select a user first");
+
         const content = inputEl.value.trim();
         if (!content) return;
 
@@ -261,18 +247,30 @@
           });
 
         inputEl.value = "";
+      }
+
+      composerEl.addEventListener("submit", (e) => {
+        e.preventDefault();
+        sendMessage();
+      });
+
+      joinBtn.onclick = () => {
+        username = genUsername(nameEl.value);
+        sessionStorage.setItem(USER_KEY, username);
+        loginEl.style.display = "none";
+        connect();
       };
 
-      dropBtn.onclick = () => {
-        // simulate low-level drop to test recovery
-        if (socket?.io?.engine) socket.io.engine.close();
-      };
+      nameEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") joinBtn.click();
+      });
 
       // Start
-      if (!username) showLogin();
-      else {
-        hideLogin();
+      if (username) {
+        loginEl.style.display = "none";
         connect();
+      } else {
+        loginEl.style.display = "flex";
       }
     </script>
   </body>
