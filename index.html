@@ -122,6 +122,7 @@
       <form id="composer">
         <input id="input" placeholder="Your message..." autocomplete="off" />
         <button id="sendBtn" type="submit">Gửi</button>
+        <button id="toggle-btn">Disconnect</button>
       </form>
     </div>
     <script src="/socket.io/socket.io.js"></script>
@@ -137,7 +138,7 @@
 
       const composerEl = document.getElementById("composer");
       const inputEl = document.getElementById("input");
-
+      const toggleButton = document.getElementById("toggle-btn");
       const MSG_KEY = "chat:conversations:v1";
       const USER_KEY = "chat:username:v1";
 
@@ -162,6 +163,17 @@
         const base = raw.trim();
         return base || "user";
       }
+
+      toggleButton.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (socket.connected) {
+          toggleButton.innerText = "Connect";
+          socket.disconnect();
+        } else {
+          toggleButton.innerText = "Disconnect";
+          socket.connect();
+        }
+      });
 
       let socket = null;
       let username = sessionStorage.getItem(USER_KEY) || "";
@@ -233,7 +245,7 @@
       }
 
       function sendMessage() {
-        if (!socket || !socket.connected) return;
+        // if (!socket || !socket.connected) return;
         if (!activeTo) return alert("Select a user first");
 
         const content = inputEl.value.trim();

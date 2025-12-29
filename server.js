@@ -11,7 +11,7 @@ const httpServer = createServer(app);
 // Giúp giữ session/rooms, và thường giữ socket.id nếu recover thành công)
 const io = new Server(httpServer, {
   connectionStateRecovery: {
-    maxDisconnectionDuration: 2 * 60 * 1000, 
+    maxDisconnectionDuration: 60 * 60 * 60 * 1000, 
     skipMiddlewares: true
   }
 });
