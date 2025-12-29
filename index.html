@@ -126,14 +126,14 @@
     </div>
     <script src="/socket.io/socket.io.js"></script>
     <script>
-      const loginEl = document.getElementById("login");
-      const nameEl = document.getElementById("name");
+      const login = document.getElementById("login");
+      const name = document.getElementById("name");
       const joinBtn = document.getElementById("joinBtn");
 
       const meLine = document.getElementById("meLine");
-      const usersEl = document.getElementById("users");
-      const topEl = document.getElementById("top");
-      const chatEl = document.getElementById("chat");
+      const users = document.getElementById("users");
+      const topEL = document.getElementById("top");
+      const chat = document.getElementById("chat");
 
       const composerEl = document.getElementById("composer");
       const inputEl = document.getElementById("input");
@@ -169,7 +169,7 @@
       const conversations = loadConversations();
 
       function renderUsers(list) {
-        usersEl.innerHTML = "";
+        users.innerHTML = "";
         list.forEach((u) => {
           const div = document.createElement("div");
           div.className = "user" + (u === activeTo ? " active" : "");
@@ -177,16 +177,16 @@
           div.onclick = () => {
             if (u === username) return;
             activeTo = u;
-            topEl.textContent = `Chatting with ${u}`;
+            topEL.textContent = `Chatting with ${u}`;
             renderUsers(list);
             renderChat();
           };
-          usersEl.appendChild(div);
+          users.appendChild(div);
         });
       }
 
       function renderChat() {
-        chatEl.innerHTML = "";
+        chat.innerHTML = "";
         if (!activeTo) return;
 
         const msgs = conversations.get(activeTo) || [];
@@ -197,9 +197,9 @@
           div.innerHTML = `<span class="${
             m.from === username ? "me" : ""
           }">${who}:</span> ${m.content}`;
-          chatEl.appendChild(div);
+          chat.appendChild(div);
         });
-        chatEl.scrollTop = chatEl.scrollHeight;
+        chat.scrollTop = chat.scrollHeight;
       }
 
       function addMsg(m) {
@@ -220,7 +220,7 @@
         socket.on("users:list", (list) => {
           renderUsers(list);
           if (activeTo && list.includes(activeTo)) {
-            topEl.textContent = `Chatting with ${activeTo}`;
+            topEL.textContent = `Chatting with ${activeTo}`;
             renderChat();
           }
         });
@@ -255,22 +255,22 @@
       });
 
       joinBtn.onclick = () => {
-        username = genUsername(nameEl.value);
+        username = genUsername(name.value);
         sessionStorage.setItem(USER_KEY, username);
-        loginEl.style.display = "none";
+        login.style.display = "none";
         connect();
       };
 
-      nameEl.addEventListener("keydown", (e) => {
+      name.addEventListener("keydown", (e) => {
         if (e.key === "Enter") joinBtn.click();
       });
 
       // Start
       if (username) {
-        loginEl.style.display = "none";
+        login.style.display = "none";
         connect();
       } else {
-        loginEl.style.display = "flex";
+        login.style.display = "flex";
       }
     </script>
   </body>

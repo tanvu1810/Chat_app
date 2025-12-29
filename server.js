@@ -65,7 +65,6 @@ io.on("connection", (socket) => {
     recovered: socket.recovered
   });
 
-  // broadcast list online cho tất cả
   io.emit("users:list", onlineList());
 
   // private message: gửi tới room của người nhận
@@ -98,7 +97,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     removeOnline(username, socket.id);
     io.emit("users:list", onlineList());
-    console.log(`${username} disconnected`);
+    // console.log(`${username} disconnected`);
   });
 });
 
