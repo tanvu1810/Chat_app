@@ -11,7 +11,7 @@ const httpServer = createServer(app);
 // Giúp giữ session/rooms, và thường giữ socket.id nếu recover thành công)
 const io = new Server(httpServer, {
   connectionStateRecovery: {
-    maxDisconnectionDuration: 2 * 60 * 1000, // 2 phút
+    maxDisconnectionDuration: 2 * 60 * 1000, 
     skipMiddlewares: true
   }
 });
@@ -43,26 +43,23 @@ io.use((socket, next) => {
   if (!username || typeof username !== "string") {
     return next(new Error("USERNAME_REQUIRED"));
   }
-
   socket.data.username = username.trim();
   next();                                                     
 });
 
 io.on("connection", (socket) => {
   const username = socket.data.username;
-
   console.log(`${username} connected`);
 
   // join room riêng của user
   socket.join(`user:${username}`);
-
   addOnline(username, socket.id);
 
   // gửi cho user mới biết trạng thái
   socket.emit("me", {
     username,
     socketId: socket.id,
-    recovered: socket.recovered
+    recover: socket.recovered
   });
 
   io.emit("users:list", onlineList());
